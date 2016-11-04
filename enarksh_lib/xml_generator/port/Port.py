@@ -9,13 +9,13 @@ import abc
 from xml.etree.ElementTree import SubElement
 
 
-class Port:
+class Port(metaclass=abc.ABCMeta):
     """
     Class Port
     Class for generating XML messages for elements of type 'InputPortType' and 'OutputPortType'.
     """
 
-    NODE_SELF_NAME = '.'  # -- @todo Discuss about this constant, because I can't import Node.
+    NODE_SELF_NAME = '.'  # -- @todo Discuss about this constant, because we can't import Node.
     """
     Token for node self.
     """
@@ -26,28 +26,28 @@ class Port:
         Object constructor.
         """
 
-        self._node = node
+        self.node = node
         """
         The node of which this port is a port.
 
         :type: enarksh_lib.xml_generator.node.Node.Node
         """
 
-        self._port_name = port_name
+        self.port_name = port_name
         """
         The name of this port.
 
-        :type: enarksh_lib.xml_generator.port.Port.Port
+        :type: str
         """
 
-        self._predecessors = []
+        self.predecessors = []
         """
         The dependencies of this port.
 
         :type: list[enarksh_lib.xml_generator.port.Port.Port]
         """
 
-        self._successors = []
+        self.successors = []
         """
         The dependants of this port.
 
@@ -59,46 +59,48 @@ class Port:
         """
         Add a port as a dependency of this port.
 
-        :param enarksh_lib.xml_generator.port.Port.Port port:
+        :param enarksh_lib.xml_generator.port.Port.Port port: The port that depends on this port.
         """
-        # -- @todo Validate owner of port and owner of this port.
-
-        if port not in self._predecessors:
-            self._predecessors.append(port)
+        if port not in self.predecessors:
+            self.predecessors.append(port)
 
     # ------------------------------------------------------------------------------------------------------------------
-    def generate_xml(self, xml_tree):
+    def generate_xml(self, parent):
         """
-        Writes into xml.
+        Generates the XML element for this port.
+
+        :param xml.etree.ElementTree.Element parent: The parent XML element.
         """
-        port_name = SubElement(xml_tree, 'PortName')
-        port_name.text = self._port_name
+        port = SubElement(parent, 'Port')
 
-        if self._predecessors:
-            dependencies_element = SubElement(xml_tree, 'Dependencies')
+        port_name = SubElement(port, 'PortName')
+        port_name.text = self.port_name
 
-            for pred in self._predecessors:
+        if self.predecessors:
+            dependencies_element = SubElement(port, 'Dependencies')
+
+            for predecessor in self.predecessors:
                 dependency = SubElement(dependencies_element, 'Dependency')
-                pred.generate_xml_dependant(dependency, self._node.get_parent())
 
-    # ------------------------------------------------------------------------------------------------------------------
-    def get_all_dependencies(self):
-        """
-        Returns all the dependencies of this port.
+                node_name = SubElement(dependency, 'NodeName')
+                if predecessor.node == self.node.parent:
+                    node_name.text = self.NODE_SELF_NAME
+                else:
+                    node_name.text = predecessor.node.name
 
-        :rtype: enarksh_lib.xml_generator.port.Port.Port port:
-        """
-        return self._predecessors
+                port_name = SubElement(dependency, 'PortName')
+                port_name.text = predecessor.port_name
 
     # ------------------------------------------------------------------------------------------------------------------
     def get_dependencies_ports(self, ports, level):
         """
+
         :param list[enarksh_lib.xml_generator.port.Port.Port] ports:
-        :param int                                                level:
+        :param int                                            level:
 
         :rtype: list[]
         """
-        for port in self._predecessors:
+        for port in self.predecessors:
             if port not in ports:
                 if level:
                     ports.append(port)
@@ -109,36 +111,9 @@ class Port:
     def get_implicit_dependencies_ports(self, ports, level):
         """
         :param list[enarksh_lib.xml_generator.port.Port.Port] ports:
-        :param int                                                level:
+        :param int                                            level:
         """
         raise NotImplementedError()
-
-    # ------------------------------------------------------------------------------------------------------------------
-    def get_name(self):
-        """
-        Returns the name of this port.
-
-        :rtype: str
-        """
-        return self._port_name
-
-    # ------------------------------------------------------------------------------------------------------------------
-    def get_node(self):
-        """
-        Returns the node of this port.
-
-        :rtype: enarksh_lib.xml_generator.node.Node.Node
-        """
-        return self._node
-
-    # ------------------------------------------------------------------------------------------------------------------
-    def get_node_name(self):
-        """
-        Returns the node name of this port.
-
-        :rtype: str
-        """
-        self._node.get_name()
 
     # ------------------------------------------------------------------------------------------------------------------
     def purge(self):
@@ -147,19 +122,19 @@ class Port:
         """
         # Get all implicit dependencies ports.
         implicit_dependencies = []
-        for port in self._predecessors:
+        for port in self.predecessors:
             port.get_implicit_dependencies_ports(implicit_dependencies, 0)
 
         # Create a new dependency array without implicit dependencies.
         direct_dependencies = []
-        for port in self._predecessors:
+        for port in self.predecessors:
             if port not in implicit_dependencies:
 
                 # Prevent duplicate dependencies.
                 if port not in direct_dependencies:
                     direct_dependencies.append(port)
 
-        self._predecessors = direct_dependencies
+        self.predecessors = direct_dependencies
 
     # ------------------------------------------------------------------------------------------------------------------
     def replace_node_dependency(self, node_name, dependencies):
@@ -172,37 +147,17 @@ class Port:
         obsolete = []
 
         # Find any predecessor that depends on node 'node_name'.
-        for index, port in enumerate(self._predecessors):
-            if port.get_node_name() == node_name:
+        for index, port in enumerate(self.predecessors):
+            if port.node.name == node_name:
                 obsolete.append(index)
 
         if obsolete:
             # Remove all dependencies of node 'node_name'.
             for index in obsolete:
-                self._predecessors.pop(index)
+                self.predecessors.pop(index)
 
             # And replace those dependencies with 'dependencies'.
             for dep in dependencies:
-                self._predecessors.append(dep)
-
-    # ------------------------------------------------------------------------------------------------------------------
-    @abc.abstractmethod
-    def get_port_type_tag(self):
-        """
-        :rtype: str
-        """
-        raise NotImplementedError()
-
-    # ------------------------------------------------------------------------------------------------------------------
-    def generate_xml_dependant(self, xml_tree, parent_node):
-        """
-        :param xml_tree:
-        :param enarksh_lib.xml_generator.node.Node.Node parent_node:
-        """
-        node_name = SubElement(xml_tree, 'NodeName')
-        node_name.text = self.NODE_SELF_NAME if self._node == parent_node else self._node.get_name()
-
-        port = SubElement(xml_tree, 'PortName')
-        port.text = self._port_name
+                self.predecessors.append(dep)
 
 # ----------------------------------------------------------------------------------------------------------------------

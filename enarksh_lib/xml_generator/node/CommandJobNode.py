@@ -17,13 +17,18 @@ class CommandJobNode(Node):
 
     # ------------------------------------------------------------------------------------------------------------------
     def __init__(self, name):
+        """
+        Object constructor.
+
+        :param str name: The name of the node.
+        """
         Node.__init__(self, name)
 
         self.args = []
         """
         The arguments of the executable.
 
-        :type: list[]
+        :type: list[str]
         """
 
         self.path = ''
@@ -34,13 +39,15 @@ class CommandJobNode(Node):
         """
 
     # ------------------------------------------------------------------------------------------------------------------
-    def generate_xml(self, xml_tree):
+    def generate_xml(self, parent):
         """
-        :param xml_tree:
-        """
-        command_job = SubElement(xml_tree, 'CommandJob')
+        Generates the XML element for this node.
 
-        super().generate_xml(command_job)
+        :param xml.etree.ElementTree.Element parent: The parent XML element.
+        """
+        command_job = SubElement(parent, 'CommandJob')
+
+        self._generate_xml_common(command_job)
 
         path = SubElement(command_job, 'Path')
         path.text = self.path
@@ -69,34 +76,5 @@ class CommandJobNode(Node):
                 ports.append(port)
 
         self.get_implicit_dependencies_input_ports(self.ALL_PORT_NAME, ports, level + 1)
-
-    # ------------------------------------------------------------------------------------------------------------------
-    def set_argument(self, argument):
-        """
-        Adds 'argument' to the argument list.
-
-        :param str argument:
-        """
-        self.args.append(argument)
-
-    # ------------------------------------------------------------------------------------------------------------------
-    def set_command(self, command):
-        """
-        Set the path and the arguments based on 'command'. Use this function only when there are no spaces in the
-        path or in any argument.
-
-        :param str command:
-        """
-        # -- @todo IMPLEMENT THIS METHOD
-        raise NotImplementedError("LOOK IN ORIGINAL IMPLEMENT METHOD")
-
-    # ------------------------------------------------------------------------------------------------------------------
-    def set_path(self, path):
-        """
-        Set the path to the executable that must be run by this job.
-
-        :param str path: The path to the executable that must be run by this job
-        """
-        self.path = path
 
 # ----------------------------------------------------------------------------------------------------------------------

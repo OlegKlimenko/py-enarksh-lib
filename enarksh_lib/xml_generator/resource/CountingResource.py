@@ -19,10 +19,13 @@ class CountingResource(Resource):
     def __init__(self, name, amount):
         """
         Object constructor.
+
+        :param str name: The name of this resource.
+        :param int amount: The amount of this resource.
         """
         Resource.__init__(self, name)
 
-        self._amount = amount
+        self.amount = amount
         """
         The amount of this resource.
 
@@ -30,20 +33,17 @@ class CountingResource(Resource):
         """
 
     # ------------------------------------------------------------------------------------------------------------------
-    def generate_xml(self, xml_tree):
+    def generate_xml(self, parent):
         """
-        :param xml_tree:
-        """
-        super().generate_xml(xml_tree)
+        Generates the XML element for this resource.
 
-        amount = SubElement(xml_tree, 'Amount')
-        amount.text = str(self._amount)
+        :param xml.etree.ElementTree.Element parent: The parent XML element.
+        """
+        resource = SubElement(parent, 'CountingResource')
 
-    # ------------------------------------------------------------------------------------------------------------------
-    def get_resource_type_tag(self):
-        """
-        :rtype: str
-        """
-        return 'CountingResource'
+        self._generate_xml_common(resource)
+
+        amount = SubElement(resource, 'Amount')
+        amount.text = str(self.amount)
 
 # ----------------------------------------------------------------------------------------------------------------------
